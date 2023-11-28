@@ -1,13 +1,14 @@
-from fastapi import FastAPI, Depends, UploadFile, File
+from fastapi import FastAPI, Depends, UploadFile
 from typing import Annotated
 
-from entity import SessionRequest, SessionResponse, ResponseModel
-from login import get_access_token, set_session_data
+from entity import SessionRequest, SessionResponse, ResponseModel, TokenHeaders, TokenAuthorization
+from login import get_access_token, set_session_data, get_user_info
 from service import transcribe
 
 app = FastAPI()
 
-SessionDep = Annotated[ResponseModel, set_session_data]
+UserDep = Annotated[TokenAuthorization, get_user_info]
+
 
 @app.post("/login")
 async def login(session_request: SessionRequest):
@@ -21,19 +22,14 @@ async def login(session_request: SessionRequest):
     return response
 
 
-@app.post("/prueba")
-async def transcribe(audio:UploadFile, session: SessionDep= Depends(set_session_data),  transcript=Depends(transcribe)):
-    if not session.error:
-        if audio.content_type != 'audio/mpeg':
-            return {"error": "El archivo debe ser un MP3."}
+@app.post("/refresh")
+async def refresh(tokens: TokenHeaders):
+    return {"data": set_session_data(tokens)}
 
-        # Validar el tamaño del archivo (25 MB = 25 * 1024 * 1024 bytes)
-        if audio.size > 25 * 1024 * 1024:
-            return {"error": "El archivo no debe superar los 25 MB."}
 
-        if audio.content_type != 'audio/mpeg':
-            return {"error": "El archivo debe ser un MP3."}
-
-        return transcript
+@app.post("/transcribe")
+async def transcribe(audio: UploadFile, user: UserDep = Depends(get_user_info), transcript=Depends(transcribe)):
+    if user is not None:
+            return transcript
     else:
-        return session
+        return {"error": user}

@@ -12,6 +12,15 @@ client = OpenAI(
 
 
 async def transcribe(audio: UploadFile):
+    if audio.content_type != 'audio/mpeg':
+        return {"error": "El archivo debe ser un MP3."}
+
+        # Validar el tamaño del archivo (25 MB = 25 * 1024 * 1024 bytes)
+    if audio.size > 25 * 1024 * 1024:
+        return {"error": "El archivo no debe superar los 25 MB."}
+
+    if audio.content_type != 'audio/mpeg':
+        return {"error": "El archivo debe ser un MP3."}
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
         temp_file_name = temp_file.name
